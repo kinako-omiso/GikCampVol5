@@ -2,7 +2,7 @@
 写真から簡易的な3Dモデルを作り、PCのブラウザに表示するWebアプリ。
 スマホをコントローラーとして使い、スマホの傾きでPC上の3Dモデルを操作する。
 PCとスマホはブラウザ同士でP2P通信する。
-詳しい仕様は docs/spec.md を参照すること。
+詳しい仕様は docs/02-spec.md を参照すること。
 
 ## アーキテクチャ・ディレクトリ構成
 | 層 | 採用 |
@@ -17,21 +17,43 @@ PCとスマホはブラウザ同士でP2P通信する。
 処理の流れ：
 写真 → MediaPipeでマスクを作る → C++(Wasm)で形状を解析 → Babylon.jsでモデルを作って表示 ← スマホの傾き（PeerJS経由）
 
-ディレクトリ構成（案。確定したら書き換える）：
-- `src/pc/`：PC版のルート（3D描画）
-- `src/mobile/`：スマホ版のルート（傾きの取得と送信）
-- `src/shared/`：PCとスマホで共有する型、通信メッセージの定義
-- `wasm/`：C++のソースとビルドスクリプト
-- `docs/`：仕様書（spec.md）
+ディレクトリ構成（npm workspaces。各ディレクトリの役割は README.md を参照）：
+```
+packages/
+├─ protocol/src/        # PCとスマホで共有する通信メッセージの型
+│  ├─ motion.ts         # 傾き 30Hz
+│  ├─ control.ts        # A/B・決定・準備完了・振動指示
+│  ├─ asset.ts          # 写真・マスクの転送
+│  ├─ stats.ts          # FighterStats
+│  └─ index.ts
+├─ geometry-wasm/       # 形状解析（PCで実行）
+│  ├─ cpp/              # C++本体
+│  ├─ dist/             # ビルド済みWasm（git管理）
+│  └─ src/              # TSラッパ＋能力値の写像式
+└─ web/src/
+   ├─ app/              # ルーティングと画面遷移（host: PC / controller: スマホ）
+   ├─ features/         # 画面ごとの機能
+   │  ├─ lobby/         # PC: QR表示・接続状態
+   │  ├─ analyze/       # PC: 受信・解析・進捗表示
+   │  ├─ battle/        # PC: 対戦（game/: Babylon・物理 / ui/: HPバー等）
+   │  ├─ result/        # PC: 結果
+   │  ├─ join/          # スマホ: 接続・センサー権限・基準姿勢
+   │  ├─ capture/       # スマホ: 撮影・範囲指定・送信（ui/ / pipeline/）
+   │  └─ pad/           # スマホ: 横持ちコントローラー
+   ├─ lib/              # peer / sensor / babylon
+   ├─ components/       # 2画面以上で使うUIだけ
+   └─ dev/              # 検証ページ（/dev/〇〇）
+docs/                   # 仕様書など
+```
 
 ## セットアップ・コマンド
 TODO: 確定したら書く
 セットアップコマンド: 環境構築が終わり次第書く
 
 ## タスク管理・仕様の参照先
-- 仕様：docs/spec.md（仕様に関してはこれが正しい）
-- 企画書：docs/overview.md
-- 技術計画：docs/tecnical_plan.md
+- 仕様：docs/02-spec.md（仕様に関してはこれが正しい）
+- 企画書：docs/01-overview.md
+- 技術計画：docs/03-tecnical_plan.md
 - タスク：GitHub Issues。作業は必ずissueに対応させる
 - 進捗の区切り：GitHub Milestone（develop-0-0 など）
 - 仕様とコードが食い違っていたら、勝手にどちらかを直さずに人間に確認する
@@ -39,7 +61,7 @@ TODO: 確定したら書く
 ## 規約
 - コミットメッセージとPRのタイトルにはissue番号を書く（例：`#5 スマホの傾き取得を実装`）
 - コメントとドキュメントは日本語で書く
-- PCとスマホの間で送るメッセージの型は `src/shared/` だけに定義し、両方からimportする
+- PCとスマホの間で送るメッセージの型は `packages/protocol/` だけに定義し、両方からimportする
 - Babylon.js は `@babylonjs/core` からサブパスでimportする（バンドルサイズを抑えるため）
 
 ## 暗黙のルールと禁止事項
